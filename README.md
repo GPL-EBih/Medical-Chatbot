@@ -32,8 +32,11 @@ The system is designed to provide reliable medical information retrieval from cu
 ## 🎥 Demo  
 <p align="center">
   <a href="https://youtu.be/dyRZdyNx1p0">
-    <img src="https://img.youtube.com/vi/dyRZdyNx1p0/0.jpg" alt="Watch the demo">
+    <img src="https://img.youtube.com/vi/dyRZdyNx1p0/0.jpg" alt="Watch the demo" style="width:480px; max-width:100%; border:0;">
   </a>
+</p>
+<p align="center">
+  <a href="https://youtu.be/dyRZdyNx1p0" style="text-decoration:none; font-weight:bold; font-size:16px; color:#fff; background-color:#ff0000; padding:8px 16px; border-radius:4px;">▶ Watch Demo</a>
 </p>
 
 

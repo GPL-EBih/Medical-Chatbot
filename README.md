@@ -30,8 +30,12 @@ The system is designed to provide reliable medical information retrieval from cu
 ---
 
 ## 🎥 Demo  
+<p align="center">
+  <a href="https://youtu.be/dyRZdyNx1p0">
+    <img src="https://img.youtube.com/vi/dyRZdyNx1p0/0.jpg" alt="Watch the demo">
+  </a>
+</p>
 
-[![Watch the demo](https://img.youtube.com/vi/your_youtube_id/0.jpg)](https://youtube.com/watch?v=your_youtube_id)  
 
 ---
 

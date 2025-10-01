@@ -66,10 +66,10 @@ Create a `.env` file in the project root and add your API keys:
 
 ```env
 SECRET_KEY=supersecret
-MONGO_URI=mongodb://localhost:27017
-PINECONE_API_KEY=your_pinecone_api_key
-API_KEY_ASSEMBLYAI=your_assemblyai_api_key
-LANGCHAIN_API_KEY=your_langchain_api_key
+MONGO_URI='xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+PINECONE_API_KEY='xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+API_KEY_ASSEMBLYAI='xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+LANGCHAIN_API_KEY='xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=medical-chatbot
 ```

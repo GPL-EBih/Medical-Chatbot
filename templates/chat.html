@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Medical Chatbot</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css')}}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="chat-container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h5 class="user-name">{{ name }}</h5>
+    <button class="sidebar-btn new-chat-btn" onclick="newChat()">
+      <i class="fas fa-plus"></i> Clear Chat
+    </button>
+    <a style ="margin: 2rem 0 0 0;">Chat history</a>
+    <div class="history-list" id="history-list"></div>
+    <button onclick="window.location.href='/logout'" class="btn btn-sm btn-danger mt-2 w-100">Logout</button>
+  </div>
+
+  <!-- Main chat -->
+  <div class="chat-main">
+    <!-- Header -->
+    <div class="chat-header text-center">
+      <span>Medical Chatbot</span>
+      <button id="toggleMute" class="btn btn-sm btn-warning float-right">🔊 Unmute</button>
+    </div>
+
+    <!-- Chat body -->
+    <div id="chatBody" class="chat-body"></div>
+
+    <!-- Input bar -->
+    <div class="chat-footer">
+      <div class="chat-input-wrapper">
+        <span class="chat-icon">＋</span>
+        <input type="text" id="text" placeholder="Ask anything..." autocomplete="off" class="chat-input">
+        <span id="startRec" class="chat-icon mic">🎙️</span>
+        <span id="stopRec" class="chat-icon stop" style="display:none;">⏹</span>
+        <span id="send" class="chat-icon send">➤</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================== JavaScript ================== -->
+<script>
+let muteBot = false;
+let currentSession = null;
+let mediaRecorder;
+let audioChunks = [];
+
+/* ========== Toggle mute/unmute ========== */
+$("#toggleMute").click(function() {
+  muteBot = !muteBot;
+  $(this).text(muteBot ? "🔇 Muted" : "🔊 Unmuted");
+});
+
+/* ========== Start recording ========== */
+$("#startRec").click(async function() {
+  audioChunks = [];
+  let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.start();
+
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) audioChunks.push(e.data);
+  };
+
+  $("#startRec").hide();
+  $("#stopRec").show();
+  $(".chat-input-wrapper").addClass("recording"); // glowing rainbow border
+});
+
+/* ========== Stop recording ========== */
+$("#stopRec").click(async function() {
+  mediaRecorder.stop();
+  mediaRecorder.onstop = async () => {
+    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+    let formData = new FormData();
+    formData.append("audio", audioBlob, "recording.wav");
+
+    $.ajax({
+      url: "/speech",
+      type: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(data) {
+        $("#text").val(data.transcript).trigger("input");
+        $("#send").click(); // auto send recognized text
+      },
+      error: function(err) {
+        alert("Error in speech recognition");
+      }
+    });
+  };
+
+  $("#stopRec").hide();
+  $("#startRec").show();
+  $(".chat-input-wrapper").removeClass("recording"); // stop glowing border
+});
+
+/* ========== Load chat history list ========== */
+async function loadHistoryList() {
+  let res = await fetch("/history/list");
+  let data = await res.json();
+  let listDiv = document.getElementById("history-list");
+  listDiv.innerHTML = "";
+  data.forEach(item => {
+    let div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `
+      ${new Date(item.started_at).toLocaleString()}
+      <button class="btn btn-sm btn-light float-right" onclick="deleteChat('${item.session_id}')">x</button>
+    `;
+    div.onclick = () => loadChat(item.session_id);
+    listDiv.appendChild(div);
+  });
+}
+
+/* ========== Load specific chat ========== */
+async function loadChat(session_id) {
+  currentSession = session_id;
+  let res = await fetch(`/history/${session_id}`);
+  let data = await res.json();
+  let chatBox = document.getElementById("chatBody");
+  chatBox.innerHTML = "";
+  data.forEach(msg => {
+    let div = document.createElement("div");
+    div.className = msg.role === "user" ? "msg-user" : "msg-bot";
+    div.textContent = msg.message;
+    chatBox.appendChild(div);
+  });
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+/* ========== Delete chat session ========== */
+async function deleteChat(session_id) {
+  await fetch(`/history/${session_id}/delete`, {method: "DELETE"});
+  loadHistoryList();
+}
+
+/* ========== New chat ========== */
+function newChat() {
+  currentSession = null;
+  document.getElementById("chatBody").innerHTML = "";
+}
+
+/* ========== Send message ========== */
+$("#send").click(function() {
+  let rawText = $("#text").val();
+  if (!rawText.trim()) return;
+  $("#text").val("");
+
+  $("#chatBody").append(`<div class="msg-user">${rawText}</div>`);
+  $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+
+  let formData = new FormData();
+  formData.append("msg", rawText);
+  formData.append("mute", muteBot);
+  if (currentSession) {
+    formData.append("session_id", currentSession);
+  }
+
+  $.ajax({
+    data: formData,
+    processData: false,
+    contentType: false,
+    type: "POST",
+    url: "/get"
+  }).done(function(data) {
+    currentSession = data.session_id;
+
+    // Bot text
+    let botHtml = `<div class="msg-bot">${data.answer}</div>`;
+
+    // Audio if available
+    if (data.audio_url && !muteBot) {
+      botHtml += `
+        <div class="msg-audio">
+          <audio controls autoplay src="${data.audio_url}"></audio>
+        </div>
+      `;
+    }
+
+    $("#chatBody").append(botHtml);
+    $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+    loadHistoryList();
+  });
+});
+
+
+/* ========== Init on load ========== */
+window.onload = loadHistoryList;
+</script>
+</body>
+</html>
